@@ -1,0 +1,503 @@
+version "4.0"
+
+class JackdawHandler : StaticEventHandler
+{
+	override void CheckReplacement(ReplaceEvent e)
+	{
+		if (!e.Replacement)
+		{
+			return;
+		}
+
+		switch (e.Replacement.GetClassName())
+		{
+			case 'ChaingunReplaces':
+				if (random[jackrand]() <= 64)
+				{
+					e.Replacement = "JackdawRandom";
+				}
+				break;
+			case 'ClipBoxPickup':
+				if (random[jackrand]() <= 8)
+				{
+					e.Replacement = "HDJackdawMag";
+				}
+				break;
+		}
+	}
+
+	override void WorldThingSpawned(WorldEvent e)
+	{
+		let JackdawAmmo = HDPistolAmmo(e.Thing);
+		if (JackdawAmmo && JackdawAmmo.GetClassName() == 'HDPistolAmmo')
+		{
+			JackdawAmmo.ItemsThatUseThis.Push("HDJackdaw");
+		}
+	}
+}
+
+class HDJackdaw : HDWeapon
+{
+	enum JackdawFlags
+	{
+		JDF_JustUnload = 1,
+		JDF_RapidFire = 2
+	}
+
+	enum JackdawProperties
+	{
+		JDProp_Flags,
+		JDProp_Chamber,
+		JDProp_Mag,
+	}
+
+	override bool AddSpareWeapon(actor newowner) { return AddSpareWeaponRegular(newowner); }
+	override HDWeapon GetSpareWeapon(actor newowner, bool reverse, bool doselect) { return GetSpareWeaponRegular(newowner, reverse, doselect); }
+	override double GunMass()
+	{
+		return 12 + 0.03 * WeaponStatus[JDProp_Mag];
+	}
+	override double WeaponBulk()
+	{
+		double BaseBulk = 154;
+		int Mag = WeaponStatus[JDProp_Mag];
+		if (Mag >= 0)
+		{
+			BaseBulk += HDJackdawMag.EncMagLoaded + Mag * ENC_9_LOADED;
+		}
+		return BaseBulk;
+	}
+	override string, double GetPickupSprite() { return WeaponStatus[JDProp_Mag] >= 0 ? "JDWGY0" : "JDWGZ0", 0.4; }
+	override void InitializeWepStats(bool idfa)
+	{
+		WeaponStatus[JDProp_Chamber] = 2;
+		WeaponStatus[JDProp_Mag] = HDJackdawMag.MagCapacity;
+	}
+	override void LoadoutConfigure(string input)
+	{
+		if (GetLoadoutVar(input, "rapid", 1) > 0)
+		{
+			WeaponStatus[JDProp_Flags] |= JDF_RapidFire;
+		}
+
+		InitializeWepStats(false);
+	}
+
+	override string GetHelpText()
+	{
+		return WEPHELP_FIRESHOOT
+		..WEPHELP_RELOAD.."  Reload mag\n"
+		..WEPHELP_UNLOADUNLOAD
+		..WEPHELP_USE.."+"..WEPHELP_RELOAD.."  Reload chamber\n"
+		..WEPHELP_MAGMANAGER;
+	}
+
+	override string PickupMessage()
+	{
+		string RapidStr = WeaponStatus[JDProp_Flags] & JDF_RapidFire ? "rapid-fire " : "";
+		return String.Format("You picked up the %s'Jackdaw' 9mm LMG", RapidStr);
+	}
+
+	override void DrawHUDStuff(HDStatusBar sb, HDWeapon hdw, HDPlayerPawn hpl)
+	{
+		if (sb.HudLevel == 1)
+		{
+			int NextMagLoaded = sb.GetNextLoadMag(HDMagAmmo(hpl.findinventory("HDJackdawMag")));
+			if (NextMagLoaded >= HDJackdawMag.MagCapacity)
+			{
+				sb.DrawImage("JDMGA0", (-46, -3),sb. DI_SCREEN_CENTER_BOTTOM, scale: (2.0, 2.0));
+			}
+			else if (NextMagLoaded <= 0)
+			{
+				sb.DrawImage("JDMGB0", (-46, -3), sb.DI_SCREEN_CENTER_BOTTOM, alpha: NextMagLoaded ? 0.6 : 1.0, scale: (2.0, 2.0));
+			}
+			else
+			{
+				sb.DrawBar("JDMGNORM", "JDMGGREY", NextMagLoaded, HDJackdawMag.MagCapacity, (-46, -3), -1, sb.SHADER_VERT, sb.DI_SCREEN_CENTER_BOTTOM);
+			}
+			sb.DrawNum(hpl.CountInv("HDJackdawMag"), -43, -8, sb.DI_SCREEN_CENTER_BOTTOM);
+		}
+		sb.DrawWepNum(hdw.WeaponStatus[JDProp_Mag], HDJackdawMag.MagCapacity);
+
+		if (hdw.WeaponStatus[JDProp_Chamber] == 2)
+		{
+			sb.DrawRect(-19, -11, 3, 1);
+		}
+	}
+
+	override void DrawSightPicture(HDStatusBar sb, HDWeapon hdw, HDPlayerPawn hpl, bool sightbob, vector2 bob, double fov, bool scopeview, actor hpc, string whichdot)
+	{
+		int cx, cy, cw, ch;
+		int ScaledYOffset = 48;
+		int ScaledWidth = 89;
+
+		[cx, cy, cw, ch] = Screen.GetClipRect();
+		sb.SetClipRect(-16 + bob.x, -4 + bob.y, 32, 16, sb.DI_SCREEN_CENTER);
+		vector2 bob2 = bob * 2;
+		bob2.y = clamp(bob2.y, -8, 8);
+		sb.DrawImage("JDWFRONT", bob2, sb.DI_SCREEN_CENTER | sb.DI_ITEM_TOP, alpha: 0.9);
+		sb.SetClipRect(cx, cy, cw, ch);
+		sb.DrawImage("JDWBACK", (0, -7) + bob, sb.DI_SCREEN_CENTER | sb.DI_ITEM_TOP);
+	}
+
+	override void DropOneAmmo(int amt)
+	{
+		if(owner)
+		{
+			amt = clamp(amt, 1, 10);
+			if (owner.CheckInventory("HDPistolAmmo", 1))
+			{
+				owner.A_DropInventory("HDPistolAmmo", amt * 30);
+			}
+			else
+			{
+				owner.A_DropInventory("HDJackdawMag", amt);
+			}
+		}
+	}
+
+	Default
+	{
+		-HDWEAPON.FITSINBACKPACK
+		Weapon.SelectionOrder 300;
+		Weapon.SlotNumber 4;
+		Weapon.SlotPriority 1.5;
+		HDWeapon.BarrelSize 30, 2, 3;
+		Scale 0.3;
+		Tag "'Jackdaw' 9mm LMG";
+		HDWeapon.Refid "jdw";
+	}
+
+	States
+	{
+		Spawn:
+			JDWG Y 0 NoDelay A_JumpIf(invoker.WeaponStatus[JDProp_Mag] >= 0, 2);
+			JDWG Z 0;
+			JDWG # -1;
+			Stop;
+		Ready:
+			JDWG A 1 A_WeaponReady(WRF_ALL);
+			Goto ReadyEnd;
+		Select0:
+			JDWG A 0;
+			Goto Select0BFG;
+		Deselect0:
+			JDWG A 0;
+			Goto Deselect0BFG;
+		User3:
+			JDWG A 0 A_MagManager("HDJackdawMag");
+			Goto Ready;
+
+		AltFire:
+			Goto ChamberManual;
+
+		Fire:
+			JDWG A 1
+			{
+				if (invoker.WeaponStatus[JDProp_Chamber] < 2)
+				{
+					SetWeaponState("ChamberManual");
+					return;
+				}
+			}
+			JDWF A 2 Offset(0, 34)
+			{
+				if (invoker.WeaponStatus[JDProp_Flags] & JDF_RapidFire)
+				{
+					A_SetTics(1);
+				}
+
+				let Proj = HDBulletActor.FireBullet(self, "HDB_9", speedfactor: 1.15);
+				if (frandom(24, ceilingz - floorz) < Proj.speed * 0.1)
+				{
+					A_AlertMonsters(250);
+				}
+				invoker.WeaponStatus[JDProp_Chamber] = 1;
+				A_StartSound("Jackdaw/Fire", CHAN_WEAPON, volume: 0.7);
+				A_ZoomRecoil(0.995);
+				A_MuzzleClimb(-frandom(0.1, 0.12), -frandom(0.15, 0.18), -frandom(0.1, 0.12),-frandom(0.15, 0.18));
+				A_Light1();
+			}
+			JDWG A 0
+			{
+				if (invoker.WeaponStatus[JDProp_Chamber] == 1)
+				{
+					A_SpawnItemEx("HDSpent9mm", cos(pitch) * 10, 0, height - 10 - sin(pitch) * 10, vel.x, vel.y, vel.z, 0, SXF_ABSOLUTEMOMENTUM | SXF_NOCHECKPOSITION | SXF_TRANSFERPITCH);
+					invoker.WeaponStatus[JDProp_Chamber] = 0;
+				}
+
+				if (invoker.WeaponStatus[JDProp_Mag] <= 0)
+				{
+					SetWeaponState("Nope");
+				}
+				else
+				{
+					A_Light0();
+					invoker.WeaponStatus[JDProp_Chamber] = 2;
+					invoker.WeaponStatus[JDProp_Mag]--;
+				}
+			}
+			Goto Ready;
+
+		Unload:
+			JDWG A 0
+			{
+				invoker.WeaponStatus[JDProp_Flags] |= JDF_JustUnload;
+				if (invoker.WeaponStatus[JDProp_Mag] >= 0)
+				{
+					SetWeaponState("UnMag");
+				}
+				else if (invoker.WeaponStatus[JDProp_Chamber] > 0)
+				{
+					SetWeaponState("UnloadChamber");
+				}
+			}
+			Goto Nope;
+		UnloadChamber:
+			JDWG A 1 A_JumpIf(invoker.WeaponStatus[JDProp_Chamber] == 0, "Nope");
+			JDWG A 4 Offset(2, 34)
+			{
+				A_StartSound("Jackdaw/BoltPull", 8);
+			}
+			JDWG A 8 Offset(1, 36)
+			{
+				class<Actor> Which = invoker.WeaponStatus[JDProp_Chamber] > 1 ? "HDPistolAmmo" : "HDSpent9mm";
+				invoker.WeaponStatus[JDProp_Chamber] = 0;
+				A_SpawnItemEx(which, cos(pitch) * 10, 0, height - 8 - sin(pitch) * 10, vel.x, vel.y, vel.z, 0, SXF_ABSOLUTEMOMENTUM | SXF_NOCHECKPOSITION | SXF_TRANSFERPITCH);
+			}
+			JDWG A 2 Offset(0, 34);
+			Goto ReadyEnd;
+
+		Reload:
+			JDWG A 0
+			{
+				invoker.WeaponStatus[JDProp_Flags] &=~ JDF_JustUnload;
+				if (invoker.WeaponStatus[JDProp_Mag] >= HDJackdawMag.MagCapacity)
+				{
+					SetWeaponState("Nope");
+				}
+				else if (invoker.WeaponStatus[JDProp_Mag] <= 0 && PressingUse())
+				{
+					if (CheckInventory("HDPistolAmmo", 1))
+					{
+						SetWeaponState("LoadChamber");
+					}
+					else
+					{
+						SetWeaponState("Nope");
+					}
+				}
+			}
+			Goto UnMag;
+		LoadChamber:
+			JDWG A 0 A_JumpIf(invoker.WeaponStatus[JDProp_Chamber] > 0, "Nope");
+			JDWG A 0 A_JumpIf(!CheckInventory("HDPistolAmmo", 1), "Nope");
+			JDWG A 1 Offset(0, 34) A_StartSound("weapons/pocket", 9);
+			JDWG A 1 Offset(2, 36);
+			JDWG A 1 Offset(2, 44);
+			JDWG A 1 Offset(5, 54);
+			JDWG A 2 Offset(7, 60);
+			JDWG A 6 Offset(8, 70);
+			JDWG A 5 Offset(8, 77)
+			{
+				if (CheckInventory("HDPistolAmmo", 1))
+				{
+					A_TakeInventory("HDPistolAmmo", 1, TIF_NOTAKEINFINITE);
+					invoker.WeaponStatus[JDProp_Chamber] = 2;
+					A_StartSound("weapons/smgchamber", 8);
+				}
+				else
+				{
+					A_SetTics(4);
+				}
+			}
+			JDWG A 3 Offset(9, 74);
+			JDWG A 2 Offset(5, 70);
+			JDWG A 1 Offset(5, 64);
+			JDWG A 1 Offset(5, 52);
+			JDWG A 1 Offset(5, 42);
+			JDWG A 1 Offset(2, 36);
+			JDWG A 2 Offset(0, 34);
+			Goto Nope;
+
+		UnMag:
+			JDWG A 1 Offset(0, 34);
+			JDWG A 1 Offset(5, 38);
+			JDWG A 1 Offset(10, 42);
+			JDWG A 4 Offset(20, 46)
+			{
+				A_StartSound("weapons/smgmagmove", 8);
+				A_MuzzleClimb(0.3, 0.4);
+			}
+			JDWG A 4 Offset(20, 46) A_MuzzleClimb(0.3, 0.4);
+			JDWG A 4 Offset(23, 48) A_MuzzleClimb(0.3, 0.4);
+			JDWG A 4 Offset(24, 47) A_MuzzleClimb(0.3, 0.4);
+			JDWG A 4 Offset(23, 48)
+			{
+				A_StartSound("weapons/smgmagmove", 8);
+				A_MuzzleClimb(0.3, 0.4);
+			}
+			JDWG A 4 Offset(26, 52)
+			{
+				A_StartSound("Jackdaw/MagOut", 8, CHANF_OVERLAP);
+				A_MuzzleClimb(0.3, 0.4);
+			}
+			JDWG A 4 Offset(26, 54) A_MuzzleClimb(0.3, 0.4);
+			JDWG A 0
+			{
+				
+				int MagAmount = invoker.WeaponStatus[JDProp_Mag];
+				if (MagAmount == -1)
+				{
+					SetWeaponState("MagOut");
+					return;
+				}
+
+				invoker.WeaponStatus[JDProp_Mag] = -1;
+				if ((!PressingUnload() && !PressingReload()) || A_JumpIfInventory("HDJackdawMag", 0, "Null"))
+				{
+					HDMagAmmo.SpawnMag(self, "HDJackdawMag", MagAmount);
+					SetWeaponState("MagOut");
+				}
+				else
+				{
+					HDMagAmmo.GiveMag(self, "HDJackdawMag", MagAmount);
+					A_StartSound("weapons/pocket", 9);
+					SetWeaponState("PocketMag");
+				}
+			}
+		PocketMag:
+			JDWG AAAAAA 5 Offset(26, 54) A_MuzzleClimb(frandom(0.2, -0.8),frandom(-0.2, 0.4));
+		MagOut:
+			JDWG A 0
+			{
+				if (invoker.WeaponStatus[JDProp_Flags] & JDF_JustUnload)
+				{
+					SetWeaponState("ReloadEnd");
+				}
+				else
+				{
+					SetWeaponState("LoadMag");
+				}
+			}
+
+		LoadMag:
+			JDWG A 0 A_StartSound("weapons/pocket", 9);
+			JDWG A 6 Offset(26, 54) A_MuzzleClimb(frandom(0.2, -0.8), frandom(-0.2, 0.4));
+			JDWG A 7 Offset(26, 52) A_MuzzleClimb(frandom(0.2, -0.8), frandom(-0.2, 0.4));
+			JDWG A 10 Offset(24, 50);
+			JDWG A 3 Offset(24, 48)
+			{
+				let Mag = HDMagAmmo(FindInventory("HDJackdawMag"));
+				if (Mag)
+				{
+					invoker.WeaponStatus[JDProp_Mag] = Mag.TakeMag(true);
+					A_StartSound("Jackdaw/MagIn", 8, CHANF_OVERLAP);
+				}
+			}
+			Goto ReloadEnd;
+
+		ReloadEnd:
+			JDWG A 4 Offset(30, 52);
+			JDWG A 3 Offset(20, 46);
+			JDWG A 2 Offset(10, 42);
+			JDWG A 2 Offset(5, 38);
+			JDWG A 1 Offset(0, 34);
+			Goto ChamberManual;
+
+		ChamberManual:
+			JDWG A 0 A_JumpIf(invoker.WeaponStatus[JDProp_Mag] <= 0 || invoker.WeaponStatus[JDProp_Chamber] == 2, "Nope");
+			JDWG A 2 Offset(2, 34);
+			JDWG A 4 Offset(3, 38) A_StartSound("Jackdaw/BoltPull", 8, CHANF_OVERLAP);
+			JDWG A 5 Offset(4, 44)
+			{
+				if (invoker.WeaponStatus[JDProp_Chamber] == 1)
+				{
+					A_SpawnItemEx("HDSpent9mm", cos(pitch) * 10, 0, height - 10 - sin(pitch) * 10, vel.x, vel.y, vel.z, 0, SXF_ABSOLUTEMOMENTUM | SXF_NOCHECKPOSITION | SXF_TRANSFERPITCH);
+					invoker.WeaponStatus[JDProp_Chamber] = 0;
+				}
+
+				A_WeaponBusy();
+				invoker.WeaponStatus[JDProp_Mag]--;
+				invoker.WeaponStatus[JDProp_Chamber] = 2;
+			}
+			JDWG A 2 Offset(3, 38);
+			JDWG A 2 Offset(2, 34);
+			JDWG A 2 Offset(0, 32);
+			Goto Nope;
+	}
+}
+
+class JackdawRandom : IdleDummy
+{
+	States
+	{
+		Spawn:
+			TNT1 A 0 NoDelay
+			{
+				let wpn = HDJackdaw(Spawn("HDJackdaw", pos, ALLOW_REPLACE));
+				if (!wpn)
+				{
+					return;
+				}
+
+				wpn.special = special;
+				for (int i = 0; i < 5; ++i)
+				{
+					wpn.Args[i] = Args[i];
+				}
+				if (!random(0, 3))
+				{
+					wpn.WeaponStatus[wpn.JDProp_Flags] |= wpn.JDF_RapidFire;
+				}
+				wpn.InitializeWepStats(false);
+			}
+			Stop;
+	}
+}
+
+class HDJackdawMag : HDMagAmmo
+{
+	override string, string, name, double GetMagSprite(int thismagamt)
+	{
+		return (thismagamt > 0) ? "JDMGA0" : "JDMGB0", "PRNDA0", "HDPistolAmmo", 1.0;
+	}
+
+	override void GetItemsThatUseThis()
+	{
+		ItemsThatUseThis.Push("HDJackdaw");
+	}
+
+	const MagCapacity = 150;
+	const EncMagEmpty = 18;
+	const EncMagLoaded = EncMagEmpty * 0.8;
+
+	Default
+	{
+		HDMagAmmo.MaxPerUnit MagCapacity;
+		HDMagAmmo.InsertTime 6;
+		HDMagAmmo.ExtractTime 4;
+		HDMagAmmo.RoundType "HDPistolAmmo";
+		HDMagAmmo.RoundBulk ENC_9_LOADED;
+		HDMagAmmo.MagBulk EncMagEmpty;
+		Tag "Jackdaw magazine";
+		Inventory.PickupMessage "Picked up a 150-round Jackdaw magazine.";
+		HDPickup.RefId "jdm";
+		Scale 1.0;
+	}
+
+	States
+	{
+		Spawn:
+			JDMG A -1;
+			Stop;
+		SpawnEmpty:
+			JDMG B -1
+			{
+				bROLLSPRITE = true;
+				bROLLCENTER = true;
+				roll = randompick(0, 0, 0, 0, 2, 2, 2, 2, 1, 3) * 90;
+			}
+			Stop;
+	}
+}
