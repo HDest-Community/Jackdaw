@@ -207,7 +207,7 @@ class HDJackdaw : HDWeapon
 					A_SetTics(1);
 				}
 
-				let Proj = HDBulletActor.FireBullet(self, "HDB_9", speedfactor: 1.15);
+				let Proj = HDBulletActor.FireBullet(self, "HDB_9", spread: 2.0, speedfactor: 1.15);
 				if (frandom(24, ceilingz - floorz) < Proj.speed * 0.1)
 				{
 					A_AlertMonsters(250);
