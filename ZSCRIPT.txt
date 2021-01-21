@@ -95,7 +95,7 @@ class HDJackdaw : HDWeapon
 	override string PickupMessage()
 	{
 		string RapidStr = WeaponStatus[JDProp_Flags] & JDF_RapidFire ? "rapid-fire " : "";
-		return String.Format("You picked up the %s'Jackdaw' 9mm LMG", RapidStr);
+		return String.Format("You picked up the %s'Jackdaw' 9mm LMG.", RapidStr);
 	}
 
 	override void DrawHUDStuff(HDStatusBar sb, HDWeapon hdw, HDPlayerPawn hpl)
@@ -142,7 +142,7 @@ class HDJackdaw : HDWeapon
 
 	override void DropOneAmmo(int amt)
 	{
-		if(owner)
+		if (owner)
 		{
 			amt = clamp(amt, 1, 10);
 			if (owner.CheckInventory("HDPistolAmmo", 1))
