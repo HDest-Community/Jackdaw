@@ -272,11 +272,12 @@ class HDJackdaw : HDWeapon
 			JDWG A 0
 			{
 				invoker.WeaponStatus[JDProp_Flags] &=~ JDF_JustUnload;
+				bool NoMags = HDMagAmmo.NothingLoaded(self, "HDJackdawMag");
 				if (invoker.WeaponStatus[JDProp_Mag] >= HDJackdawMag.MagCapacity)
 				{
 					SetWeaponState("Nope");
 				}
-				else if (invoker.WeaponStatus[JDProp_Mag] <= 0 && PressingUse())
+				else if (invoker.WeaponStatus[JDProp_Mag] <= 0 && (PressingUse() || NoMags))
 				{
 					if (CheckInventory("HDPistolAmmo", 1))
 					{
@@ -286,6 +287,10 @@ class HDJackdaw : HDWeapon
 					{
 						SetWeaponState("Nope");
 					}
+				}
+				else if (NoMags)
+				{
+					SetWeaponState("Nope");
 				}
 			}
 			Goto UnMag;
