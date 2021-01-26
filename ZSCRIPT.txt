@@ -67,7 +67,7 @@ class HDJackdaw : HDWeapon
 		}
 		return BaseBulk;
 	}
-	override string, double GetPickupSprite() { return WeaponStatus[JDProp_Mag] >= 0 ? "JDWGY0" : "JDWGZ0", 0.4; }
+	override string, double GetPickupSprite() { return WeaponStatus[JDProp_Mag] >= 0 ? "JDWGY0" : "JDWGZ0", 0.55; }
 	override void InitializeWepStats(bool idfa)
 	{
 		WeaponStatus[JDProp_Chamber] = 2;
