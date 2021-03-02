@@ -2,8 +2,10 @@ Code:
 - Accensus
 
 Sprites:
+- TSF
+ + Weapon sprite
 - Samuel & Joshua McCarthy (https://www.artstation.com/artwork/GRwO4)
- + Pickup sprite and reshade by Mor'ladim.
+ + Pickup sprite by Mor'ladim
 
 Sounds:
 - LakeDown
