@@ -55,11 +55,11 @@ class HDJackdaw : HDWeapon
 	override HDWeapon GetSpareWeapon(actor newowner, bool reverse, bool doselect) { return GetSpareWeaponRegular(newowner, reverse, doselect); }
 	override double GunMass()
 	{
-		return 12 + (WeaponStatus[JDProp_Mag > -1] ? HDJackdawMag.EncMagLoaded * 0.1 + 0.03 * WeaponStatus[JDProp_Mag] : 0);
+		return 10 + (WeaponStatus[JDProp_Mag > -1] ? HDJackdawMag.EncMagLoaded * 0.1 + 0.025 * WeaponStatus[JDProp_Mag] : 0);
 	}
 	override double WeaponBulk()
 	{
-		double BaseBulk = 154;
+		double BaseBulk = 134;
 		int Mag = WeaponStatus[JDProp_Mag];
 		if (Mag >= 0)
 		{
@@ -67,7 +67,7 @@ class HDJackdaw : HDWeapon
 		}
 		return BaseBulk;
 	}
-	override string, double GetPickupSprite() { return WeaponStatus[JDProp_Mag] >= 0 ? "JDWGY0" : "JDWGZ0", 0.55; }
+	override string, double GetPickupSprite() { return WeaponStatus[JDProp_Mag] >= 0 ? "JDWGY0" : "JDWGZ0", 0.52; }
 	override void InitializeWepStats(bool idfa)
 	{
 		WeaponStatus[JDProp_Chamber] = 2;
@@ -159,8 +159,8 @@ class HDJackdaw : HDWeapon
 		Weapon.SelectionOrder 300;
 		Weapon.SlotNumber 4;
 		Weapon.SlotPriority 1.5;
-		HDWeapon.BarrelSize 30, 2, 3;
-		Scale 0.3;
+		HDWeapon.BarrelSize 25, 2, 4;
+		Scale 0.28;
 		Tag "'Jackdaw' 9mm SMG";
 		HDWeapon.Refid "jdw";
 	}
