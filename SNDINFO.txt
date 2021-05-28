@@ -1,5 +1,3 @@
 Jackdaw/Fire JDWFIRE
-Jackdaw/MagIn JDWMAGIN
-Jackdaw/MagOut JDWMAGOT
 Jackdaw/BoltPull JDWBLTBK
 $alias Jackdaw/ChamberQuick weapons/smgchamber
