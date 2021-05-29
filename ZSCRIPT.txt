@@ -80,9 +80,7 @@ class HDJackdaw : HDWeapon
 	override string GetHelpText()
 	{
 		return WEPHELP_FIRESHOOT
-		..WEPHELP_RELOAD.."  Reload mag\n"
-		..WEPHELP_UNLOADUNLOAD
-		..WEPHELP_USE.."+"..WEPHELP_RELOAD.."  Reload chamber\n"
+		..WEPHELP_RELOAD.."  Reload chamber\n"
 		..WEPHELP_MAGMANAGER;
 	}
 
@@ -182,7 +180,7 @@ class HDJackdaw : HDWeapon
 			JDWG A 1
 			{
 				A_TryLoadMag();
-				A_WeaponReady(WRF_ALL);
+				A_WeaponReady(WRF_ALLOWRELOAD | WRF_ALLOWUSER3);
 			}
 			Goto ReadyEnd;
 		Select0:
@@ -244,17 +242,7 @@ class HDJackdaw : HDWeapon
 			Goto Ready;
 
 		Reload:
-			JDWG A 0
-			{
-				if (invoker.WeaponStatus[JDProp_Mag] <= 0 && PressingUse() && CheckInventory("HDPistolAmmo", 1))
-				{
-					SetWeaponState("LoadChamber");
-				}
-			}
-			Goto Nope;
-		LoadChamber:
-			JDWG A 0 A_JumpIf(invoker.WeaponStatus[JDProp_Chamber] > 0, "Nope");
-			JDWG A 0 A_JumpIf(!CheckInventory("HDPistolAmmo", 1), "Nope");
+			JDWG A 0 A_JumpIf(invoker.WeaponStatus[JDProp_Chamber] > 0 || !CheckInventory("HDPistolAmmo", 1), "Nope");
 			JDWG A 1 Offset(0, 34) A_StartSound("weapons/pocket", 9);
 			JDWG A 1 Offset(2, 36);
 			JDWG A 1 Offset(2, 44);
