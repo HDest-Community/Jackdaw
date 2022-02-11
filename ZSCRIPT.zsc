@@ -180,7 +180,7 @@ class HDJackdaw : HDWeapon
 					return;
 				}
 			}
-			JDWF A 2 Offset(0, 34)
+			JDWF A 2
 			{
 				if (invoker.WeaponStatus[JDProp_Flags] & JDF_RapidFire)
 				{
