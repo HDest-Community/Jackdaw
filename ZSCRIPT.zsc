@@ -42,30 +42,16 @@ class HDJackdaw : HDWeapon
 	{
 		JDProp_Flags,
 		JDProp_Chamber,
-		JDProp_Mag, // [Ace] Just so I don't have to rewrite the entirety of the code, the mag will be loaded with up to 30 rounds when the gun is equipped.
 	}
 
 	override bool AddSpareWeapon(actor newowner) { return AddSpareWeaponRegular(newowner); }
 	override HDWeapon GetSpareWeapon(actor newowner, bool reverse, bool doselect) { return GetSpareWeaponRegular(newowner, reverse, doselect); }
-	override double GunMass()
-	{
-		return 6.5 + ENC_9_LOADED * WeaponStatus[JDProp_Mag];
-	}
-	override double WeaponBulk()
-	{
-		double base = 105;
-		int mag = WeaponStatus[JDProp_Mag];
-		if (mag >= 0)
-		{
-			base += mag * ENC_9_LOADED;
-		}
-		return base;
-	}
+	override double GunMass() { return 6.5; }
+	override double WeaponBulk() { return 105; }
 	override string, double GetPickupSprite() { return "JDWGZ0", 0.52; }
 	override void InitializeWepStats(bool idfa)
 	{
 		WeaponStatus[JDProp_Chamber] = 2;
-		WeaponStatus[JDProp_Mag] = 30;
 	}
 	override void LoadoutConfigure(string input)
 	{
@@ -79,9 +65,7 @@ class HDJackdaw : HDWeapon
 
 	override string GetHelpText()
 	{
-		return WEPHELP_FIRESHOOT
-		..WEPHELP_RELOAD.."  Reload chamber\n"
-		..WEPHELP_MAGMANAGER;
+		return WEPHELP_FIRESHOOT;
 	}
 
 	override string PickupMessage()
@@ -92,11 +76,10 @@ class HDJackdaw : HDWeapon
 
 	override void DrawHUDStuff(HDStatusBar sb, HDWeapon hdw, HDPlayerPawn hpl)
 	{
-		sb.DrawWepNum(hdw.WeaponStatus[JDProp_Mag], 30);
-
 		if (hdw.WeaponStatus[JDProp_Chamber] == 2)
 		{
-			sb.DrawRect(-19, -11, 3, 1);
+			sb.DrawRect(-22, -8, 6, 3);
+			sb.DrawRect(-23, -7, 1, 1);
 		}
 	}
 
@@ -112,22 +95,16 @@ class HDJackdaw : HDWeapon
 		sb.DrawImage("JDWBACK", (0, -7) + bob, sb.DI_SCREEN_CENTER | sb.DI_ITEM_TOP);
 	}
 
-	private action void A_TryLoadMag()
+	private action void A_TryLoadChamber()
 	{
 		if (invoker.Storage && invoker.Storage.owner == invoker.owner && invoker.Storage.Storage)
 		{
-			if (invoker.WeaponStatus[JDProp_Mag] == 0)
+			if (invoker.WeaponStatus[JDProp_Chamber] == 0)
 			{
-				let nma = invoker.Storage.Storage.Find('HDPistolAmmo');
-				if (nma)
+				if (invoker.AmmoReserve)
 				{
-					int ToAdd = min(30 - invoker.WeaponStatus[JDProp_Mag], invoker.Storage.Storage.GetAmount('HDPistolAmmo'));
-					invoker.WeaponStatus[JDProp_Mag] += ToAdd;
-
-					if (ToAdd > 0)
-					{
-						invoker.Storage.Storage.RemoveItem(nma, null, null, ToAdd);
-					}
+					invoker.WeaponStatus[JDProp_Chamber] = 2;
+					invoker.Storage.Storage.RemoveItem(invoker.AmmoReserve, null, null, 1);
 				}
 				else
 				{
@@ -136,7 +113,6 @@ class HDJackdaw : HDWeapon
 			}
 			return;
 		}
-
 		A_FindStorage();
 	}
 
@@ -150,6 +126,7 @@ class HDJackdaw : HDWeapon
 				let nma = bp.Storage.Find('HDPistolAmmo');
 				if (nma)
 				{
+					invoker.AmmoReserve = nma;
 					invoker.Storage = bp;
 					break;
 				}
@@ -158,6 +135,7 @@ class HDJackdaw : HDWeapon
 	}
 
 	private HDBackpack Storage;
+	private StorageItem AmmoReserve;
 
 	Default
 	{
@@ -179,7 +157,7 @@ class HDJackdaw : HDWeapon
 		Ready:
 			JDWG A 1
 			{
-				A_TryLoadMag();
+				A_TryLoadChamber();
 				A_WeaponReady(WRF_ALLOWRELOAD | WRF_ALLOWUSER3);
 			}
 			Goto ReadyEnd;
@@ -218,61 +196,21 @@ class HDJackdaw : HDWeapon
 				A_StartSound("Jackdaw/Fire", CHAN_WEAPON, volume: 0.7);
 				A_ZoomRecoil(0.995);
 				A_MuzzleClimb(-frandom(0.1, 0.12), -frandom(0.15, 0.18), -frandom(0.1, 0.12),-frandom(0.15, 0.18));
-				A_Light1();
 			}
 			JDWG A 0
 			{
+				// [Ace]
 				if (invoker.WeaponStatus[JDProp_Chamber] == 1)
 				{
 					A_EjectCasing("HDSpent9mm", 10, -frandom(79, 81), frandom(7, 7.5));
 					invoker.WeaponStatus[JDProp_Chamber] = 0;
 				}
-
-				if (invoker.WeaponStatus[JDProp_Mag] <= 0)
-				{
-					SetWeaponState("Nope");
-				}
-				else
-				{
-					A_Light0();
-					invoker.WeaponStatus[JDProp_Chamber] = 2;
-					invoker.WeaponStatus[JDProp_Mag]--;
-				}
+				A_TryLoadChamber();
 			}
 			Goto Ready;
 
-		Reload:
-			JDWG A 0 A_JumpIf(invoker.WeaponStatus[JDProp_Chamber] > 0 || !CheckInventory("HDPistolAmmo", 1), "Nope");
-			JDWG A 1 Offset(0, 34) A_StartSound("weapons/pocket", 9);
-			JDWG A 1 Offset(2, 36);
-			JDWG A 1 Offset(2, 44);
-			JDWG A 1 Offset(5, 54);
-			JDWG A 2 Offset(7, 60);
-			JDWG A 6 Offset(8, 70);
-			JDWG A 5 Offset(8, 77)
-			{
-				if (CheckInventory("HDPistolAmmo", 1))
-				{
-					A_TakeInventory("HDPistolAmmo", 1, TIF_NOTAKEINFINITE);
-					invoker.WeaponStatus[JDProp_Chamber] = 2;
-					A_StartSound("weapons/smgchamber", 8);
-				}
-				else
-				{
-					A_SetTics(4);
-				}
-			}
-			JDWG A 3 Offset(9, 74);
-			JDWG A 2 Offset(5, 70);
-			JDWG A 1 Offset(5, 64);
-			JDWG A 1 Offset(5, 52);
-			JDWG A 1 Offset(5, 42);
-			JDWG A 1 Offset(2, 36);
-			JDWG A 2 Offset(0, 34);
-			Goto Nope;
-
 		ChamberManual:
-			JDWG A 0 A_JumpIf(invoker.WeaponStatus[JDProp_Mag] <= 0 || invoker.WeaponStatus[JDProp_Chamber] == 2, "Nope");
+			JDWG A 0 A_JumpIf(invoker.WeaponStatus[JDProp_Chamber] == 2, "Nope");
 			JDWG A 2 Offset(2, 34);
 			JDWG A 4 Offset(3, 38) A_StartSound("Jackdaw/BoltPull", 8, CHANF_OVERLAP);
 			JDWG A 5 Offset(4, 44)
@@ -284,8 +222,7 @@ class HDJackdaw : HDWeapon
 				}
 
 				A_WeaponBusy();
-				invoker.WeaponStatus[JDProp_Mag]--;
-				invoker.WeaponStatus[JDProp_Chamber] = 2;
+				A_TryLoadChamber();
 			}
 			JDWG A 2 Offset(3, 38);
 			JDWG A 2 Offset(2, 34);
