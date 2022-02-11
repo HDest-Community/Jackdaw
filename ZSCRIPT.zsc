@@ -195,7 +195,6 @@ class HDJackdaw : HDWeapon
 			}
 			JDWG A 0
 			{
-				// [Ace]
 				if (invoker.WeaponStatus[JDProp_Chamber] == 1)
 				{
 					A_EjectCasing("HDSpent9mm", 10, -frandom(79, 81), frandom(7, 7.5));
