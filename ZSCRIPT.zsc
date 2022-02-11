@@ -101,20 +101,14 @@ class HDJackdaw : HDWeapon
 		{
 			if (invoker.WeaponStatus[JDProp_Chamber] == 0)
 			{
-				if (invoker.AmmoReserve)
-				{	
+				if (invoker.AmmoReserve && invoker.AmmoReserve.Amounts.Size() > 0 && invoker.AmmoReserve.Amounts[0] > 0)
+				{
+					invoker.Storage.Storage.RemoveItem(invoker.AmmoReserve, null, null, 1);
 					invoker.WeaponStatus[JDProp_Chamber] = 2;
-					if (!invoker.Storage.Storage.RemoveItem(invoker.AmmoReserve, null, null, 1))
-					{
-						invoker.AmmoReserve = null;
-						if (A_FindStorage())
-						{
-							A_TryLoadChamber();
-						}
-					}
 				}
 				else
 				{
+					invoker.AmmoReserve = null;
 					if (A_FindStorage())
 					{
 						A_TryLoadChamber();
