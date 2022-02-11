@@ -155,11 +155,7 @@ class HDJackdaw : HDWeapon
 			JDWG Z -1;
 			Stop;
 		Ready:
-			JDWG A 1
-			{
-				A_TryLoadChamber();
-				A_WeaponReady(WRF_ALLOWRELOAD | WRF_ALLOWUSER3);
-			}
+			JDWG A 1 A_WeaponReady(WRF_ALLOWRELOAD | WRF_ALLOWUSER3);
 			Goto ReadyEnd;
 		Select0:
 			JDWG A 0;
