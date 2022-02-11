@@ -104,14 +104,13 @@ class HDJackdaw : HDWeapon
 				if (invoker.AmmoReserve)
 				{	
 					invoker.WeaponStatus[JDProp_Chamber] = 2;
-					invoker.Storage.Storage.RemoveItem(invoker.AmmoReserve, null, null, 1);
-
-					// [Ace] If you drop the item from the backpack, the reference will remain because RemoveItem does not destroy it on purpose.
-					// https://codeberg.org/mc776/hideousdestructor/commit/c54c95734e5106762533c0d6695772ec7acbd5a2
-					// This is PRECISELY why that line was there you, MATT, YOU OVERWHELMING FUCKING RETARD!!! THAT WAS THE FUCKING CLEANUP CODE! STOP REMOVING SHIT YOU DON'T UNDERSTAND, YOU DAFT CUNT!
-					if (invoker.AmmoReserve.Amounts.Size() == 0)
+					if (!invoker.Storage.Storage.RemoveItem(invoker.AmmoReserve, null, null, 1))
 					{
-						invoker.AmmoReserve.Destroy();
+						invoker.AmmoReserve = null;
+						if (A_FindStorage())
+						{
+							A_TryLoadChamber();
+						}
 					}
 				}
 				else
@@ -124,7 +123,10 @@ class HDJackdaw : HDWeapon
 			}
 			return;
 		}
-		A_FindStorage();
+		if (A_FindStorage())
+		{
+			A_TryLoadChamber();
+		}
 	}
 
 	private action bool A_FindStorage()
@@ -135,7 +137,7 @@ class HDJackdaw : HDWeapon
 			if (bp && bp.Storage)
 			{
 				let nma = bp.Storage.Find('HDPistolAmmo');
-				if (nma)
+				if (nma && nma.Amounts.Size() > 0 && nma.Amounts[0] > 0)
 				{
 					invoker.AmmoReserve = nma;
 					invoker.Storage = bp;
