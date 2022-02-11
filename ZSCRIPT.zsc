@@ -49,17 +49,17 @@ class HDJackdaw : HDWeapon
 	override HDWeapon GetSpareWeapon(actor newowner, bool reverse, bool doselect) { return GetSpareWeaponRegular(newowner, reverse, doselect); }
 	override double GunMass()
 	{
-		return 10 + ENC_9_LOADED * WeaponStatus[JDProp_Mag];
+		return 6.5 + ENC_9_LOADED * WeaponStatus[JDProp_Mag];
 	}
 	override double WeaponBulk()
 	{
-		double BaseBulk = 134;
-		int Mag = WeaponStatus[JDProp_Mag];
-		if (Mag >= 0)
+		double base = 105;
+		int mag = WeaponStatus[JDProp_Mag];
+		if (mag >= 0)
 		{
-			BaseBulk += Mag * ENC_9_LOADED;
+			base += mag * ENC_9_LOADED;
 		}
-		return BaseBulk;
+		return base;
 	}
 	override string, double GetPickupSprite() { return "JDWGZ0", 0.52; }
 	override void InitializeWepStats(bool idfa)
@@ -161,7 +161,7 @@ class HDJackdaw : HDWeapon
 
 	Default
 	{
-		-HDWEAPON.FITSINBACKPACK
+		+HDWEAPON.FITSINBACKPACK
 		Weapon.SelectionOrder 300;
 		Weapon.SlotNumber 4;
 		Weapon.SlotPriority 1.5;
